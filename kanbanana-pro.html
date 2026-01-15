@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kanbanana Pro</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #111111;
+      --surface: #f4f4f5;
+      --border: #e4e4e7;
+      --border-hover: #a1a1aa;
+      --accent: #111111;
+      --danger: #ef4444;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--fg);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* --- Header --- */
+    header {
+      padding: 0.75rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg);
+      z-index: 10;
+    }
+
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .badge {
+      font-size: 0.75rem;
+      background: var(--fg);
+      color: var(--bg);
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    button {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--fg);
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    button:hover {
+      border-color: var(--fg);
+      background: var(--surface);
+    }
+
+    button.primary {
+      background: var(--fg);
+      color: var(--bg);
+      border-color: var(--fg);
+    }
+
+    button.primary:hover {
+      opacity: 0.9;
+      background: var(--fg);
+    }
+
+    button.danger {
+      background: var(--danger);
+      color: white;
+      border-color: var(--danger);
+    }
+
+    button.danger:hover {
+      opacity: 0.9;
+    }
+
+    /* --- Toolbar (Search & Filter) --- */
+    .toolbar {
+      padding: 0.75rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: #fff;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .search-container {
+      position: relative;
+      flex: 0 0 250px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 0.4rem 0.6rem 0.4rem 2rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: var(--font);
+      font-size: 0.9rem;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--fg);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #999;
+      pointer-events: none;
+    }
+
+    .filter-labels {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .filter-chip {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 12px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      opacity: 0.6;
+      transition: all 0.2s;
+      font-weight: 500;
+      color: white;
+    }
+
+    .filter-chip:hover {
+      opacity: 0.8;
+      transform: translateY(-1px);
+    }
+
+    .filter-chip.active {
+      opacity: 1;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+      border-color: rgba(0, 0, 0, 0.1);
+      transform: scale(1.05);
+    }
+
+    /* Settings List Styles */
+    .settings-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .setting-btn {
+      width: 100%;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border);
+    }
+
+    .setting-btn.danger-text {
+      color: var(--danger);
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .setting-btn.danger-text:hover {
+      background: #fef2f2;
+      border-color: var(--danger);
+    }
+
+    /* --- Board --- */
+    main {
+      flex: 1;
+      display: flex;
+      gap: 1.5rem;
+      padding: 1.5rem;
+      overflow-x: auto;
+      background: var(--bg);
+    }
+
+    .column {
+      flex: 1;
+      min-width: 260px;
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      max-height: 100%;
+    }
+
+    .col-header {
+      padding: 1rem;
+      font-weight: 600;
+      font-size: 0.95rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      background: #fff;
+      border-radius: 8px 8px 0 0;
+    }
+
+    .col-count {
+      background: var(--surface);
+      padding: 0.1rem 0.5rem;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      color: #666;
+      border: 1px solid var(--border);
+    }
+
+    .col-body {
+      flex: 1;
+      padding: 0.75rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      transition: background-color 0.2s;
+    }
+
+    .col-body.drag-over {
+      background-color: #e4e4e7;
+    }
+
+    /* --- Cards --- */
+    .card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.75rem;
+      box-shadow: var(--shadow);
+      cursor: grab;
+      transition: transform 0.1s, box-shadow 0.1s;
+      position: relative;
+      group: card;
+    }
+
+    .card:hover {
+      border-color: var(--border-hover);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .card:active {
+      cursor: grabbing;
+    }
+
+    .card.dragging {
+      opacity: 0.5;
+      background: #fafafa;
+    }
+
+    .card-labels {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 6px;
+    }
+
+    .card-label-badge {
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: white;
+      font-weight: 500;
+      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-content {
+      font-size: 0.925rem;
+      line-height: 1.5;
+      margin-bottom: 0.5rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .card-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: #666;
+    }
+
+    .btn-icon {
+      padding: 4px;
+      border: none;
+      color: #999;
+      border-radius: 4px;
+    }
+
+    .btn-icon:hover {
+      background: #eee;
+      color: var(--danger);
+      border-color: transparent;
+    }
+
+    /* --- Add Card Area --- */
+    .add-card-wrapper {
+      padding: 0.75rem;
+      border-top: 1px solid var(--border);
+      background: #fff;
+      border-radius: 0 0 8px 8px;
+    }
+
+    .add-btn {
+      width: 100%;
+      justify-content: center;
+      border-style: dashed;
+      color: #666;
+    }
+
+    .add-btn:hover {
+      border-style: solid;
+      color: var(--fg);
+    }
+
+    /* --- Modals --- */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(2px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      width: 90%;
+      max-width: 450px;
+      padding: 1.5rem;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      transform: translateY(10px);
+      transition: transform 0.2s;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-overlay.open .modal {
+      transform: translateY(0);
+    }
+
+    .modal h2 {
+      margin: 0 0 1rem 0;
+      font-size: 1.1rem;
+    }
+
+    .modal p {
+      margin: 0 0 1.5rem 0;
+      color: #666;
+      line-height: 1.5;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: var(--font);
+      font-size: 0.95rem;
+      resize: vertical;
+      margin-bottom: 1rem;
+      outline: none;
+    }
+
+    textarea:focus {
+      border-color: var(--fg);
+      ring: 1px solid var(--fg);
+    }
+
+    .code-block {
+      font-family: monospace;
+      font-size: 0.8rem;
+      background: #f4f4f5;
+      color: #333;
+      white-space: pre;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    /* Label Styles */
+    .label-selector {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      padding: 0.5rem;
+      background: var(--surface);
+      border-radius: 6px;
+    }
+
+    .label-option {
+      padding: 4px 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      color: white;
+      opacity: 0.5;
+      transition: all 0.15s;
+      border: 2px solid transparent;
+      font-weight: 500;
+    }
+
+    .label-option:hover {
+      opacity: 0.8;
+    }
+
+    .label-option.selected {
+      opacity: 1;
+      border-color: var(--fg);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Label Manager Styles */
+    .label-manager-list {
+      margin-bottom: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .label-manager-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      background: #fff;
+    }
+
+    .label-manager-item:last-child {
+      border-bottom: none;
+    }
+
+    .label-manager-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .label-preview-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+    }
+
+    .label-form {
+      display: flex;
+      gap: 0.5rem;
+      background: var(--surface);
+      padding: 0.75rem;
+      border-radius: 6px;
+      align-items: center;
+    }
+
+    input[type="color"] {
+      border: none;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      background: none;
+      cursor: pointer;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 0.5rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: var(--font);
+    }
+
+
+    /* Notification Toast */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--fg);
+      color: var(--bg);
+      padding: 0.75rem 1.25rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      transform: translateY(100px);
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 200;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .toast.show {
+      transform: translateY(0);
+    }
+
+    /* Mobile Adjustments */
+    @media (max-width: 768px) {
+      main {
+        flex-direction: column;
+        padding: 1rem;
+      }
+
+      .column {
+        flex: 0 0 auto;
+        min-width: 0;
+        max-height: 500px;
+      }
+
+      header {
+        padding: 0.75rem;
+      }
+
+      .toolbar {
+        padding: 0.75rem 1rem;
+      }
+
+      .search-container {
+        flex: 1 1 100%;
+      }
+
+      h1 span {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- DATA STORE -->
+  <script id="quine-data" type="application/json">
+        {"columns":{"todo":{"id":"todo","title":"To Do","itemIds":["welcome"]},"progress":{"id":"progress","title":"In Progress","itemIds":[]},"blocked":{"id":"blocked","title":"Blocked","itemIds":[]},"done":{"id":"done","title":"Done","itemIds":[]}},"items":{"welcome":{"id":"welcome","content":"Welcome to Kanbanana Pro!\n\nNew Features:\n1. Search & Filter in the toolbar\n2. Manage Labels in settings\n3. Click a task to tag it.","createdAt":1715424000000,"labelIds":["l_welcome"]}},"labels":{"l_welcome":{"id":"l_welcome","name":"New Feature","color":"#3b82f6"},"l_urgent":{"id":"l_urgent","name":"Urgent","color":"#ef4444"},"l_low":{"id":"l_low","name":"Low Priority","color":"#10b981"}}}
+    </script>
+
+  <header>
+    <h1>Kanbanana <span class="badge">Pro</span></h1>
+    <div class="actions">
+      <button class="primary" onclick="app.saveToFile()" title="Save board to HTML file">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+          <polyline points="17 21 17 13 7 13 7 21"></polyline>
+          <polyline points="7 3 7 8 15 8"></polyline>
+        </svg>
+        Save to File
+      </button>
+      <button onclick="app.openSettingsModal()" title="Settings & Data">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path
+            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+          </path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="toolbar" id="toolbar">
+    <div class="search-container">
+      <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input type="text" class="search-input" id="search-input" placeholder="Search tasks..."
+        oninput="app.updateFilter('text', this.value)">
+    </div>
+    <div class="filter-labels" id="filter-labels-container">
+      <!-- Filter chips populate here -->
+    </div>
+  </div>
+
+  <main id="board"></main>
+
+  <!-- Task Editor Modal -->
+  <div id="modal-overlay" class="modal-overlay">
+    <div class="modal">
+      <h2 id="modal-title">Edit Task</h2>
+      <div id="label-selector" class="label-selector"></div>
+      <textarea id="modal-input" placeholder="What needs to be done?"></textarea>
+      <div class="modal-actions">
+        <button onclick="app.closeModal()">Cancel</button>
+        <button class="primary" onclick="app.confirmModal()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-overlay" class="modal-overlay">
+    <div class="modal">
+      <h2>Settings</h2>
+      <div class="settings-list">
+        <button class="setting-btn" onclick="app.openLabelManagerFromSettings()">
+          <span>Manage Labels</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+            <line x1="7" y1="7" x2="7.01" y2="7"></line>
+          </svg>
+        </button>
+        <button class="setting-btn" onclick="app.openDataFromSettings()">
+          <span>Data Management (Import/Export)</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+        <button class="setting-btn" onclick="app.openAboutFromSettings()">
+          <span>About Kanbanana</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+        </button>
+        <button class="setting-btn danger-text" onclick="app.resetFromSettings()">
+          <span>Reset Board & Clear Data</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6h18"></path>
+            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-actions">
+        <button onclick="app.closeSettingsModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Label Manager Modal -->
+  <div id="label-manager-overlay" class="modal-overlay">
+    <div class="modal">
+      <h2>Manage Labels</h2>
+      <div id="label-manager-list" class="label-manager-list">
+        <!-- Labels populate here -->
+      </div>
+      <div class="label-form">
+        <input type="color" id="new-label-color" value="#3b82f6">
+        <input type="text" id="new-label-name" placeholder="New Label Name">
+        <button class="primary" onclick="app.addLabel()">Add</button>
+      </div>
+      <div class="modal-actions">
+        <button onclick="app.closeLabelManager()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- About Modal -->
+  <div id="about-overlay" class="modal-overlay">
+    <div class="modal">
+      <h2>About Kanbanana Pro</h2>
+      <div class="about-content" style="line-height: 1.6; color: #444; margin-bottom: 1.5rem;">
+        <p><strong>Kanbanana Pro</strong> is a self-contained, offline-first Kanban board.</p>
+        <p>It is designed as a <em>Quine</em> application: it can save its own source code, preserving your tasks and
+          data directly inside the file itself.</p>
+        <ul style="padding-left: 1.2rem; margin: 1rem 0;">
+          <li>🍌 <strong>Portable:</strong> Single HTML file.</li>
+          <li>🔒 <strong>Private:</strong> Data stays on your device.</li>
+          <li>💾 <strong>Offline:</strong> No internet required.</li>
+        </ul>
+        <p style="font-size: 0.8rem; color: #888; margin-top: 1rem;">
+          Version 2.3 • Local-First Software<br>
+          Created by <a href="https://github.com/hl" target="_blank"
+            style="color: inherit; text-decoration: underline;">hl</a>
+        </p>
+      </div>
+      <div class="modal-actions">
+        <button onclick="app.closeAboutModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Data Import/Export Modal -->
+  <div id="data-modal-overlay" class="modal-overlay">
+    <div class="modal">
+      <h2>Data Management</h2>
+      <p>Copy this JSON to export, or paste JSON here to import.</p>
+      <textarea id="data-input" class="code-block" spellcheck="false"></textarea>
+      <div class="modal-actions">
+        <button onclick="app.closeDataModal()">Close</button>
+        <button class="primary" onclick="app.importData()">Import & Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="confirm-overlay" class="modal-overlay">
+    <div class="modal">
+      <h2 id="confirm-title">Are you sure?</h2>
+      <p id="confirm-message">This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button onclick="app.closeConfirmModal()">Cancel</button>
+        <button class="danger" onclick="app.executeConfirmAction()">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast">File saved successfully!</div>
+
+  <script>
+    /**
+     * Kanbanana Engine
+     * Handles state, rendering, persistence, and self-replication (Quine logic).
+     */
+    const app = (() => {
+      // --- State Management ---
+      let state = {
+        columns: {
+          todo: { id: 'todo', title: 'To Do', itemIds: [] },
+          progress: { id: 'progress', title: 'In Progress', itemIds: [] },
+          blocked: { id: 'blocked', title: 'Blocked', itemIds: [] },
+          done: { id: 'done', title: 'Done', itemIds: [] }
+        },
+        items: {},
+        labels: {}
+      };
+
+      // Transient state (not saved)
+      let filterState = {
+        text: '',
+        activeLabels: new Set()
+      };
+
+      const STORAGE_KEY = 'kanbanana_state_v1';
+      let draggedItemId = null;
+      let currentEditingColId = null;
+      let currentEditingItemId = null;
+      let tempSelectedLabels = new Set(); // For tracking labels in modal
+
+      // Generic confirmation state
+      let pendingConfirmAction = null;
+
+      // --- Initialization ---
+      function init() {
+        const localData = localStorage.getItem(STORAGE_KEY);
+        const embeddedDataElement = document.getElementById('quine-data');
+
+        if (localData) {
+          try {
+            state = JSON.parse(localData);
+          } catch (e) {
+            console.error('Local storage corrupted', e);
+          }
+        } else if (embeddedDataElement && embeddedDataElement.textContent.trim()) {
+          try {
+            state = JSON.parse(embeddedDataElement.textContent);
+          } catch (e) {
+            console.error('Embedded data corrupted', e);
+          }
+        }
+
+        // Ensure labels object exists
+        if (!state.labels) {
+          state.labels = {
+            'l_urgent': { id: 'l_urgent', name: 'Urgent', color: '#ef4444' },
+            'l_low': { id: 'l_low', name: 'Low Priority', color: '#10b981' }
+          };
+        }
+
+        // Add Shortcut Listener
+        const textarea = document.getElementById('modal-input');
+        textarea.addEventListener('keydown', (e) => {
+          if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            confirmModal();
+          }
+        });
+
+        renderToolbar();
+        render();
+      }
+
+      function save() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }
+
+      // --- Toolbar Logic ---
+      function renderToolbar() {
+        const container = document.getElementById('filter-labels-container');
+        container.innerHTML = '';
+
+        Object.values(state.labels).forEach(label => {
+          const chip = document.createElement('div');
+          chip.className = 'filter-chip';
+          if (filterState.activeLabels.has(label.id)) {
+            chip.classList.add('active');
+          }
+          chip.style.backgroundColor = label.color;
+          chip.innerText = label.name;
+          chip.onclick = () => updateFilter('label', label.id);
+          container.appendChild(chip);
+        });
+      }
+
+      function updateFilter(type, value) {
+        if (type === 'text') {
+          filterState.text = value;
+        } else if (type === 'label') {
+          if (filterState.activeLabels.has(value)) {
+            filterState.activeLabels.delete(value);
+          } else {
+            filterState.activeLabels.add(value);
+          }
+          renderToolbar(); // re-render to update active classes
+        }
+        render();
+      }
+
+      // --- Rendering ---
+      function render() {
+        const board = document.getElementById('board');
+        board.innerHTML = '';
+
+        Object.values(state.columns).forEach(col => {
+          const colEl = document.createElement('div');
+          colEl.className = 'column';
+
+          // Filter Items Logic
+          const visibleItemIds = col.itemIds.filter(itemId => {
+            const item = state.items[itemId];
+            if (!item) return false;
+
+            // Text Filter
+            const matchText = item.content.toLowerCase().includes(filterState.text.toLowerCase());
+
+            // Label Filter (OR logic: match any selected label)
+            // If no labels selected, ignore label filter
+            let matchLabel = true;
+            if (filterState.activeLabels.size > 0) {
+              if (!item.labelIds || item.labelIds.length === 0) {
+                matchLabel = false;
+              } else {
+                matchLabel = item.labelIds.some(id => filterState.activeLabels.has(id));
+              }
+            }
+
+            return matchText && matchLabel;
+          });
+
+          // Header
+          colEl.innerHTML = `
+                        <div class="col-header">
+                            <span>${col.title}</span>
+                            <span class="col-count">${visibleItemIds.length}</span>
+                        </div>
+                    `;
+
+          // Body
+          const bodyEl = document.createElement('div');
+          bodyEl.className = 'col-body';
+          bodyEl.dataset.colId = col.id;
+          bodyEl.addEventListener('dragover', handleDragOver);
+          bodyEl.addEventListener('dragleave', handleDragLeave);
+          bodyEl.addEventListener('drop', handleDrop);
+
+          // Cards
+          visibleItemIds.forEach(itemId => {
+            const item = state.items[itemId];
+            const card = createCardElement(item);
+            bodyEl.appendChild(card);
+          });
+
+          colEl.appendChild(bodyEl);
+
+          // Add Button
+          const addWrapper = document.createElement('div');
+          addWrapper.className = 'add-card-wrapper';
+          addWrapper.innerHTML = `
+                        <button class="add-btn" onclick="app.openAddModal('${col.id}')">
+                            + Add Task
+                        </button>
+                    `;
+          colEl.appendChild(addWrapper);
+
+          board.appendChild(colEl);
+        });
+      }
+
+      function createCardElement(item) {
+        const el = document.createElement('div');
+        el.className = 'card';
+        el.draggable = true;
+        el.dataset.id = item.id;
+
+        const date = new Date(item.createdAt).toLocaleDateString();
+
+        // Labels generation
+        let labelsHtml = '';
+        if (item.labelIds && item.labelIds.length > 0) {
+          labelsHtml = '<div class="card-labels">';
+          item.labelIds.forEach(lId => {
+            const label = state.labels[lId];
+            if (label) {
+              labelsHtml += `<span class="card-label-badge" style="background-color: ${label.color}">${escapeHtml(label.name)}</span>`;
+            }
+          });
+          labelsHtml += '</div>';
+        }
+
+        el.innerHTML = `
+                    ${labelsHtml}
+                    <div class="card-content">${escapeHtml(item.content)}</div>
+                    <div class="card-meta">
+                        <span>${date}</span>
+                        <button class="btn-icon delete-btn">×</button>
+                    </div>
+                `;
+
+        const deleteBtn = el.querySelector('.delete-btn');
+        deleteBtn.addEventListener('click', (e) => requestDeleteItem(item.id, e));
+
+        el.addEventListener('click', (e) => {
+          if (!e.target.closest('.delete-btn')) openEditModal(item.id);
+        });
+
+        el.addEventListener('dragstart', handleDragStart);
+        el.addEventListener('dragend', handleDragEnd);
+
+        return el;
+      }
+
+      // --- Drag and Drop Logic ---
+      function handleDragStart(e) {
+        draggedItemId = this.dataset.id;
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', draggedItemId);
+      }
+
+      function handleDragEnd(e) {
+        this.classList.remove('dragging');
+        draggedItemId = null;
+        document.querySelectorAll('.col-body').forEach(col => col.classList.remove('drag-over'));
+      }
+
+      function handleDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        this.classList.add('drag-over');
+      }
+
+      function handleDragLeave(e) {
+        this.classList.remove('drag-over');
+      }
+
+      function handleDrop(e) {
+        e.preventDefault();
+        this.classList.remove('drag-over');
+        const targetColId = this.dataset.colId;
+
+        if (!draggedItemId || !targetColId) return;
+
+        let sourceColId = null;
+        for (const colId in state.columns) {
+          if (state.columns[colId].itemIds.includes(draggedItemId)) {
+            sourceColId = colId;
+            break;
+          }
+        }
+
+        const cards = [...this.querySelectorAll('.card:not(.dragging)')];
+        const afterElement = cards.reduce((closest, child) => {
+          const box = child.getBoundingClientRect();
+          const offset = e.clientY - box.top - box.height / 2;
+          if (offset < 0 && offset > closest.offset) {
+            return { offset: offset, element: child };
+          } else {
+            return closest;
+          }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+
+        state.columns[sourceColId].itemIds = state.columns[sourceColId].itemIds.filter(id => id !== draggedItemId);
+
+        if (afterElement) {
+          const afterId = afterElement.dataset.id;
+          const targetIndex = state.columns[targetColId].itemIds.indexOf(afterId);
+          if (targetIndex !== -1) {
+            state.columns[targetColId].itemIds.splice(targetIndex, 0, draggedItemId);
+          } else {
+            state.columns[targetColId].itemIds.push(draggedItemId);
+          }
+        } else {
+          state.columns[targetColId].itemIds.push(draggedItemId);
+        }
+
+        save();
+        render();
+      }
+
+      // --- Modals & Actions ---
+      function openAddModal(colId) {
+        currentEditingColId = colId;
+        currentEditingItemId = null;
+        tempSelectedLabels.clear();
+
+        document.getElementById('modal-title').innerText = 'New Task';
+        document.getElementById('modal-input').value = '';
+
+        renderLabelSelector();
+
+        document.getElementById('modal-overlay').classList.add('open');
+        setTimeout(() => document.getElementById('modal-input').focus(), 100);
+      }
+
+      function openEditModal(itemId) {
+        currentEditingItemId = itemId;
+        currentEditingColId = null;
+        tempSelectedLabels.clear();
+
+        const item = state.items[itemId];
+        if (item.labelIds) {
+          item.labelIds.forEach(id => {
+            if (state.labels[id]) tempSelectedLabels.add(id);
+          });
+        }
+
+        document.getElementById('modal-title').innerText = 'Edit Task';
+        document.getElementById('modal-input').value = item.content;
+
+        renderLabelSelector();
+
+        document.getElementById('modal-overlay').classList.add('open');
+      }
+
+      function renderLabelSelector() {
+        const container = document.getElementById('label-selector');
+        container.innerHTML = '';
+
+        Object.values(state.labels).forEach(label => {
+          const el = document.createElement('div');
+          el.className = 'label-option';
+          el.style.backgroundColor = label.color;
+          el.innerText = label.name;
+
+          if (tempSelectedLabels.has(label.id)) {
+            el.classList.add('selected');
+          }
+
+          el.onclick = () => {
+            if (tempSelectedLabels.has(label.id)) {
+              tempSelectedLabels.delete(label.id);
+              el.classList.remove('selected');
+            } else {
+              tempSelectedLabels.add(label.id);
+              el.classList.add('selected');
+            }
+          };
+
+          container.appendChild(el);
+        });
+      }
+
+      function closeModal() {
+        document.getElementById('modal-overlay').classList.remove('open');
+        currentEditingColId = null;
+        currentEditingItemId = null;
+      }
+
+      function confirmModal() {
+        const text = document.getElementById('modal-input').value.trim();
+        if (!text) return closeModal();
+
+        if (currentEditingItemId) {
+          state.items[currentEditingItemId].content = text;
+          state.items[currentEditingItemId].labelIds = Array.from(tempSelectedLabels);
+        } else if (currentEditingColId) {
+          const newId = 'item_' + Date.now();
+          state.items[newId] = {
+            id: newId,
+            content: text,
+            createdAt: Date.now(),
+            labelIds: Array.from(tempSelectedLabels)
+          };
+          state.columns[currentEditingColId].itemIds.push(newId);
+        }
+
+        save();
+        render();
+        closeModal();
+      }
+
+      // --- Label Management ---
+      function openLabelManagerFromSettings() {
+        closeSettingsModal();
+        setTimeout(openLabelManager, 200);
+      }
+
+      function openLabelManager() {
+        renderLabelManagerList();
+        document.getElementById('new-label-name').value = '';
+        document.getElementById('label-manager-overlay').classList.add('open');
+      }
+
+      function closeLabelManager() {
+        document.getElementById('label-manager-overlay').classList.remove('open');
+      }
+
+      function renderLabelManagerList() {
+        const list = document.getElementById('label-manager-list');
+        list.innerHTML = '';
+        Object.values(state.labels).forEach(label => {
+          const div = document.createElement('div');
+          div.className = 'label-manager-item';
+          div.innerHTML = `
+                        <div class="label-manager-info">
+                            <div class="label-preview-dot" style="background-color: ${label.color}"></div>
+                            <span>${escapeHtml(label.name)}</span>
+                        </div>
+                        <button class="btn-icon" onclick="app.deleteLabel('${label.id}')">×</button>
+                    `;
+          list.appendChild(div);
+        });
+      }
+
+      function addLabel() {
+        const name = document.getElementById('new-label-name').value.trim();
+        const color = document.getElementById('new-label-color').value;
+        if (!name) return;
+
+        const id = 'l_' + Date.now();
+        state.labels[id] = { id, name, color };
+
+        // Reset input
+        document.getElementById('new-label-name').value = '';
+
+        save();
+        renderLabelManagerList();
+        renderToolbar(); // update filter chips
+        render(); // update board
+      }
+
+      function deleteLabel(id) {
+        if (!confirm("Delete this label?")) return;
+        delete state.labels[id];
+
+        // Cleanup items
+        Object.values(state.items).forEach(item => {
+          if (item.labelIds) {
+            item.labelIds = item.labelIds.filter(lid => lid !== id);
+          }
+        });
+
+        // Cleanup filters
+        if (filterState.activeLabels.has(id)) {
+          filterState.activeLabels.delete(id);
+        }
+
+        save();
+        renderLabelManagerList();
+        renderToolbar();
+        render();
+      }
+
+      // --- Settings & Menus ---
+      function openSettingsModal() {
+        document.getElementById('settings-overlay').classList.add('open');
+      }
+
+      function closeSettingsModal() {
+        document.getElementById('settings-overlay').classList.remove('open');
+      }
+
+      function openDataFromSettings() {
+        closeSettingsModal();
+        setTimeout(openDataModal, 200);
+      }
+
+      function openAboutFromSettings() {
+        closeSettingsModal();
+        setTimeout(() => document.getElementById('about-overlay').classList.add('open'), 200);
+      }
+
+      function closeAboutModal() {
+        document.getElementById('about-overlay').classList.remove('open');
+      }
+
+      function resetFromSettings() {
+        closeSettingsModal();
+        setTimeout(requestReset, 200);
+      }
+
+      function openDataModal() {
+        const json = JSON.stringify(state, null, 2);
+        document.getElementById('data-input').value = json;
+        document.getElementById('data-modal-overlay').classList.add('open');
+      }
+
+      function closeDataModal() {
+        document.getElementById('data-modal-overlay').classList.remove('open');
+      }
+
+      function importData() {
+        try {
+          const json = document.getElementById('data-input').value;
+          const newState = JSON.parse(json);
+          if (!newState.columns || !newState.items) throw new Error("Invalid Format");
+
+          state = newState;
+          save();
+          renderToolbar();
+          render();
+          closeDataModal();
+          showToast("Data imported successfully!");
+        } catch (e) {
+          alert("Error importing JSON: " + e.message);
+        }
+      }
+
+      // --- Generic Confirmation System ---
+      function openConfirmModal(title, message, action) {
+        document.getElementById('confirm-title').innerText = title;
+        document.getElementById('confirm-message').innerText = message;
+        pendingConfirmAction = action;
+        document.getElementById('confirm-overlay').classList.add('open');
+      }
+
+      function closeConfirmModal() {
+        document.getElementById('confirm-overlay').classList.remove('open');
+        pendingConfirmAction = null;
+      }
+
+      function executeConfirmAction() {
+        if (pendingConfirmAction) pendingConfirmAction();
+        closeConfirmModal();
+      }
+
+      // --- Deletion Logic ---
+      function requestDeleteItem(itemId, e) {
+        e.stopPropagation();
+        openConfirmModal(
+          'Delete Task?',
+          'Are you sure you want to delete this task? This action cannot be undone.',
+          () => deleteItem(itemId)
+        );
+      }
+
+      function deleteItem(itemId) {
+        delete state.items[itemId];
+        Object.values(state.columns).forEach(col => {
+          col.itemIds = col.itemIds.filter(id => id !== itemId);
+        });
+        save();
+        render();
+      }
+
+      function requestReset() {
+        openConfirmModal(
+          'Reset Board?',
+          'This will delete ALL data. Are you sure?',
+          () => {
+            localStorage.removeItem(STORAGE_KEY);
+            location.reload();
+          }
+        );
+      }
+
+      // --- The Quine Function (Save Self) ---
+      function saveToFile() {
+        const dataScript = document.getElementById('quine-data');
+        dataScript.textContent = JSON.stringify(state);
+
+        const htmlContent = `<!DOCTYPE html>\n${document.documentElement.outerHTML}`;
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+
+        const date = new Date().toISOString().slice(0, 10);
+        a.href = url;
+        a.download = `kanbanana-pro-${date}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showToast();
+      }
+
+      // --- Utils ---
+      function escapeHtml(text) {
+        if (!text) return '';
+        const map = {
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, function (m) { return map[m]; });
+      }
+
+      function showToast(msg) {
+        const t = document.getElementById('toast');
+        if (msg) t.innerText = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
+      }
+
+      document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+          e.preventDefault();
+          saveToFile();
+        }
+      });
+
+      return {
+        init,
+        saveToFile,
+        openAddModal,
+        closeModal,
+        confirmModal,
+        requestDeleteItem,
+        requestReset,
+        openConfirmModal,
+        closeConfirmModal,
+        executeConfirmAction,
+        openSettingsModal,
+        closeSettingsModal,
+        openDataFromSettings,
+        resetFromSettings,
+        openDataModal,
+        closeDataModal,
+        importData,
+        openAboutFromSettings,
+        closeAboutModal,
+        openLabelManagerFromSettings,
+        closeLabelManager,
+        addLabel,
+        deleteLabel,
+        updateFilter
+      };
+    })();
+
+    app.init();
+  </script>
+</body>
+
+</html>

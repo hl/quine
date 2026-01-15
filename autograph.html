@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- SEO & Meta Tags (Dynamic content will be updated by JS) -->
+  <meta name="description" content="A simple, self-contained static blog.">
+  <meta name="author" content="Autograph User">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Autograph">
+  <meta property="og:description" content="A simple, self-contained static blog.">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Autograph">
+  <meta name="twitter:description" content="A simple, self-contained static blog.">
+
+  <title>Autograph</title>
+
+  <!-- Blog Configuration (Persisted) -->
+  <script id="blog-configuration" type="application/json">
+        {}
+    </script>
+
+  <!-- Offline Markdown Parser -->
+  <script>
+    // A lightweight, offline-ready Markdown parser
+    const marked = {
+      parse: function (md) {
+        if (!md) return "";
+        let output = md;
+
+        // 1. Code Blocks
+        const codeBlocks = [];
+        output = output.replace(/```([\s\S]*?)```/gm, (match) => {
+          codeBlocks.push(match);
+          return `__CODEBLOCK${codeBlocks.length - 1}__`;
+        });
+
+        // 2. Basic HTML Escaping
+        output = output.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+        // 3. Block Elements
+        output = output.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+        output = output.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+        output = output.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+        output = output.replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>');
+        output = output.replace(/^- (.*$)/gim, '<li>$1</li>');
+        output = output.replace(/(<li>.*<\/li>)/gim, '<ul>$1</ul>').replace(/<\/ul>\s*<ul>/gim, '');
+        output = output.replace(/^---$/gim, '<hr>');
+
+        // 4. Inline Elements
+        output = output.replace(/!\[([^\]]+)\]\(([^)]+)\)/gim, '<img src="$2" alt="$1">');
+        output = output.replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2">$1</a>');
+        output = output.replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>');
+        output = output.replace(/\*(.*?)\*/gim, '<em>$1</em>');
+        output = output.replace(/`([^`]+)`/gim, '<code>$1</code>');
+
+        // 5. Newlines
+        output = output.replace(/\n/gim, '<br>');
+        output = output.replace(/(<\/h\d>|<\/blockquote>|<\/ul>|<\/hr>)\s*<br>/gim, '$1');
+
+        // 6. Restore Code Blocks
+        output = output.replace(/__CODEBLOCK(\d+)__/g, (match, index) => {
+          let code = codeBlocks[index].replace(/```/g, '').trim();
+          code = code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+          return `<pre><code>${code}</code></pre>`;
+        });
+
+        return output;
+      }
+    };
+  </script>
+
+  <style>
+    :root {
+      --bg-color: #ffffff;
+      --text-color: #111111;
+      --secondary-text: #666666;
+      --border-color: #e6e6e6;
+      --code-bg: #f7f7f7;
+      --input-bg: #ffffff;
+      --danger-color: #d32f2f;
+      --button-text: #ffffff;
+      --overlay-gradient: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 1));
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #0a0a0a;
+        --text-color: #ffffff;
+        --secondary-text: #a0a0a0;
+        --border-color: #333333;
+        --code-bg: #1a1a1a;
+        --input-bg: #0a0a0a;
+        --danger-color: #ff5252;
+        --button-text: #0a0a0a;
+        --overlay-gradient: linear-gradient(to bottom, rgba(10, 10, 10, 0), rgba(10, 10, 10, 1));
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      line-height: 1.75;
+      font-size: 18px;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 768px;
+      margin: 0 auto;
+      padding: 4rem 2rem;
+    }
+
+    /* --- Header & Intro --- */
+    header {
+      margin-bottom: 4rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1.1;
+    }
+
+    /* Links in header */
+    h1 a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .intro {
+      margin-top: 4rem;
+      margin-bottom: 2rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border-color);
+      color: var(--secondary-text);
+      font-size: 1.1rem;
+      line-height: 1.6;
+      font-weight: 400;
+    }
+
+    /* --- Buttons --- */
+    .controls {
+      display: flex;
+      align-items: center;
+    }
+
+    .controls button,
+    button.primary,
+    button.secondary {
+      background-color: transparent;
+      border: 2px solid var(--text-color);
+      color: var(--text-color);
+      height: 2.5rem;
+      /* Fixed height for alignment */
+      padding: 0 1.2rem;
+      /* Horizontal padding */
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border-radius: 6px;
+      margin-left: 0.8rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+    }
+
+    button.primary,
+    .controls button.primary {
+      background-color: var(--text-color);
+      color: var(--button-text);
+      border-color: var(--text-color);
+    }
+
+    .controls button:hover,
+    button.secondary:hover {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      transform: translateY(-1px);
+    }
+
+    button.primary:hover,
+    .controls button.primary:hover {
+      background-color: var(--secondary-text);
+      border-color: var(--secondary-text);
+      color: var(--button-text);
+    }
+
+    button:disabled,
+    .controls button.primary:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      transform: none;
+      background-color: var(--text-color) !important;
+      border-color: var(--text-color) !important;
+    }
+
+    /* Icon Button Styling */
+    .controls button.icon-btn {
+      padding: 0;
+      width: 2.5rem;
+      /* Make them square and match height */
+    }
+
+    /* Back Button */
+    .back-link {
+      display: none;
+      /* Hidden by default */
+      margin-bottom: 2rem;
+      color: var(--secondary-text);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+      color: var(--text-color);
+    }
+
+    /* --- Editor & Settings & Help Sections --- */
+    #editor-section,
+    #settings-section,
+    #help-section {
+      display: none;
+      background: var(--bg-color);
+      padding: 2rem;
+      border-radius: 12px;
+      margin-bottom: 4rem;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    #editor-section.visible,
+    #settings-section.visible,
+    #help-section.visible {
+      display: block;
+    }
+
+    /* Help Section Specifics */
+    .help-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .help-item h3 {
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.25rem;
+      display: inline-block;
+    }
+
+    .help-item p {
+      font-size: 0.95rem;
+      color: var(--secondary-text);
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    input[type="text"],
+    input[type="date"],
+    textarea {
+      width: 100%;
+      padding: 0.8rem 0;
+      border: none;
+      border-bottom: 2px solid var(--border-color);
+      background: transparent;
+      color: var(--text-color);
+      border-radius: 0;
+      font-family: inherit;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+
+    input[type="text"]:focus,
+    input[type="date"]:focus,
+    textarea:focus {
+      outline: none;
+      border-bottom-color: var(--text-color);
+    }
+
+    textarea {
+      min-height: 200px;
+      resize: vertical;
+      margin-top: 0.5rem;
+    }
+
+    /* Data Management Section */
+    .data-management {
+      margin-top: 2rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .data-management h3 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+    }
+
+    .data-help-text {
+      font-size: 0.9rem;
+      color: var(--secondary-text);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+      background: var(--code-bg);
+      padding: 1rem;
+      border-radius: 6px;
+    }
+
+    .data-buttons {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .settings-info {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--secondary-text);
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px dashed var(--border-color);
+    }
+
+    .settings-info a {
+      color: inherit;
+      text-decoration: underline;
+    }
+
+    /* --- Blog Posts & VIEW MODES --- */
+    article {
+      position: relative;
+    }
+
+    /* == LIST VIEW (Default) == */
+    body.list-view article {
+      margin-bottom: 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    body.list-view article .content {
+      display: none;
+      /* Hide full content in list view */
+    }
+
+    body.list-view article .meta-row {
+      margin-bottom: 0;
+      border-top: none;
+      padding-top: 0.2rem;
+    }
+
+    body.list-view article h2 {
+      font-size: 1.8rem;
+      margin-bottom: 0.5rem;
+    }
+
+    /* == SINGLE VIEW == */
+    body.single-view #posts-container article {
+      display: none;
+      /* Hide all articles by default */
+    }
+
+    body.single-view #posts-container article.active-post {
+      display: block;
+      /* Show only active post */
+      margin-bottom: 4rem;
+    }
+
+    body.single-view .intro {
+      display: none;
+      /* Hide bio on single post pages */
+    }
+
+    body.single-view .back-link {
+      display: inline-block;
+    }
+
+    article header {
+      margin-bottom: 1rem;
+      padding-bottom: 0;
+      display: block;
+    }
+
+    article h2 {
+      margin-top: 0;
+      margin-bottom: 0.8rem;
+      font-size: 2.2rem;
+      font-weight: 800;
+      line-height: 1.2;
+      position: relative;
+      letter-spacing: -0.5px;
+    }
+
+    /* Title Link Styling */
+    article h2 a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    body.list-view article h2 a:hover {
+      color: var(--secondary-text);
+      text-decoration: underline;
+    }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      border-top: 1px solid var(--border-color);
+      padding-top: 0.5rem;
+    }
+
+    .meta {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--secondary-text);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .post-actions {
+      opacity: 0.5;
+    }
+
+    article:hover .post-actions {
+      opacity: 1;
+    }
+
+    .post-actions button {
+      background: none;
+      border: none;
+      color: var(--secondary-text);
+      cursor: pointer;
+      font-size: 0.85rem;
+      padding: 0 0 0 1rem;
+      font-weight: 600;
+      margin: 0;
+      z-index: 10;
+      position: relative;
+    }
+
+    .post-actions button:hover {
+      color: var(--text-color);
+    }
+
+    .post-actions button.delete-btn:hover {
+      color: var(--danger-color);
+    }
+
+    .content {
+      font-size: 1.125rem;
+      line-height: 1.8;
+    }
+
+    .content p {
+      margin-bottom: 1.5rem;
+    }
+
+    .content img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      margin: 2rem 0;
+    }
+
+    .content pre {
+      background: var(--code-bg);
+      padding: 1.5rem;
+      overflow-x: auto;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      font-size: 0.95rem;
+    }
+
+    .content blockquote {
+      border-left: 4px solid var(--text-color);
+      margin: 2rem 0;
+      padding-left: 1.5rem;
+      color: var(--secondary-text);
+      font-style: italic;
+      font-size: 1.2rem;
+    }
+
+    footer {
+      text-align: left;
+      font-size: 0.9rem;
+      color: var(--secondary-text);
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border-color);
+    }
+  </style>
+</head>
+
+<body class="list-view">
+
+  <div class="container">
+    <header>
+      <h1><a href="?" id="blog-title">Autograph</a></h1>
+      <div class="controls">
+        <button onclick="toggleEditor()">+ New Post</button>
+        <button id="save-btn" class="primary" onclick="downloadStaticPage()" disabled>Save Blog</button>
+        <button class="icon-btn" onclick="toggleSettings()" title="Settings" aria-label="Settings">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+            </path>
+          </svg>
+        </button>
+        <button class="icon-btn" onclick="toggleHelp()" title="Help" aria-label="Help">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <a href="?" class="back-link">← Back to Articles</a>
+
+    <!-- Help Section -->
+    <div id="help-section">
+      <h2>About Autograph</h2>
+      <div class="help-grid">
+        <div class="help-item">
+          <h3>The "Quine" Concept</h3>
+          <p>Autograph works as a self-replicating file. When you click <strong>Save Blog</strong>, you download a new
+            HTML file that contains the application logic PLUS all your new posts baked directly into the code. This new
+            file is your updated master copy.</p>
+        </div>
+        <div class="help-item">
+          <h3>Writing Posts</h3>
+          <p>Click <strong>+ New Post</strong> to open the editor. You can write in Markdown. Clicking "Publish to Page"
+            saves the post to your browser's local storage immediately.</p>
+        </div>
+        <div class="help-item">
+          <h3>Saving & Publishing</h3>
+          <p>Changes in local storage are temporary. To make them permanent and shareable, you must click <strong>Save
+              Blog</strong>. This generates the standalone HTML file that you can upload to any web host (like GitHub
+            Pages or Netlify).</p>
+        </div>
+        <div class="help-item">
+          <h3>Navigation</h3>
+          <p>The homepage is a chronological list. Clicking a post title opens the <strong>Single View</strong>
+            (?post=slug-id), which is URL-friendly and indexable by search engines.</p>
+        </div>
+        <div class="help-item">
+          <h3>Customization</h3>
+          <p>Use the <strong>Cog Icon</strong> to change the Blog Title, Author Bio, Page Title (for browser tabs),
+            Footer text, and SEO Meta tags.</p>
+        </div>
+        <div class="help-item">
+          <h3>Backup & Migration</h3>
+          <p>Use the <strong>Export Data</strong> button in settings to save a JSON backup. You can Import this JSON
+            into a new version of Autograph to migrate your content.</p>
+        </div>
+      </div>
+      <div style="text-align: right;">
+        <button class="primary" onclick="toggleHelp()">Close</button>
+      </div>
+    </div>
+
+    <!-- Settings Section -->
+    <div id="settings-section">
+      <h2>Settings</h2>
+
+      <div class="form-group">
+        <label for="settings-title">Blog Title (Header)</label>
+        <input type="text" id="settings-title" placeholder="Autograph">
+      </div>
+
+      <div class="form-group">
+        <label for="settings-page-title">Page Title (Browser Tab)</label>
+        <input type="text" id="settings-page-title" placeholder="Leave empty to use Blog Title">
+      </div>
+
+      <div class="form-group">
+        <label for="settings-intro">Author Bio / Intro (Markdown supported)</label>
+        <textarea id="settings-intro" placeholder="Write a short introduction about yourself..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="settings-footer-text">Footer Text (Copyright Name)</label>
+        <input type="text" id="settings-footer-text" placeholder="Leave empty to use Blog Title">
+      </div>
+
+      <div class="form-group">
+        <label for="settings-meta-author">Meta Author Name</label>
+        <input type="text" id="settings-meta-author" placeholder="John Doe">
+      </div>
+
+      <div class="form-group">
+        <label for="settings-meta-desc">Meta Description (SEO)</label>
+        <textarea id="settings-meta-desc" style="min-height: 100px;"
+          placeholder="A brief description of your blog for search engines..."></textarea>
+      </div>
+
+      <div class="data-management">
+        <h3>Data Management</h3>
+        <div class="data-help-text">
+          <strong>Export:</strong> Download all posts and settings as a JSON file. Use this to backup your data or
+          migrate to a new version of Autograph.<br><br>
+          <strong>Import:</strong> Load data from a JSON file. <span
+            style="color: var(--danger-color); font-weight: bold;">Warning:</span> Importing will clear your current
+          browser local storage to prevent conflicts.
+        </div>
+        <div class="data-buttons">
+          <button class="secondary" onclick="exportData()">Export Data (JSON)</button>
+          <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(this)">
+          <button class="secondary" onclick="document.getElementById('import-file').click()">Import Data (JSON)</button>
+        </div>
+      </div>
+
+      <div style="text-align: right; margin-top: 2rem;">
+        <button class="secondary" onclick="toggleSettings()">Cancel</button>
+        <button class="primary" onclick="saveSettings()">Save Changes</button>
+      </div>
+
+      <div class="settings-info">
+        <p>Autograph v1.0</p>
+        <p>Created by <a href="[https://github.com/hl](https://github.com/hl)" target="_blank">Henricus Louwhoff</a></p>
+      </div>
+    </div>
+
+    <!-- Editor Form -->
+    <div id="editor-section">
+      <input type="hidden" id="edit-post-id" value="">
+      <div class="form-group">
+        <label for="post-title">Post Title</label>
+        <input type="text" id="post-title" placeholder="Enter post title...">
+      </div>
+      <div class="form-group">
+        <label for="post-date">Publish Date</label>
+        <input type="date" id="post-date">
+      </div>
+      <div class="form-group">
+        <label for="post-content">Content (Markdown supported)</label>
+        <textarea id="post-content" placeholder="Write your thoughts here..."></textarea>
+      </div>
+      <div style="text-align: right;">
+        <button class="secondary" onclick="toggleEditor()">Cancel</button>
+        <button class="primary" id="publish-btn" onclick="savePost()">Publish to Page</button>
+      </div>
+    </div>
+
+    <!-- Posts Container -->
+    <main id="posts-container">
+      <!-- HARDCODED_POSTS_START -->
+      <!-- existing posts will be baked in here by the save function -->
+      <!-- HARDCODED_POSTS_END -->
+    </main>
+
+    <div class="intro" id="blog-intro">
+      <!-- Content here will be replaced by JS if settings exist, or baked in -->
+      <p>Welcome to Autograph. This is a space for your thoughts, notes, and ideas. Feel free to explore!</p>
+    </div>
+
+    <footer>
+      <p>&copy; <span id="year"></span> <span id="footer-author">Autograph</span>. All rights reserved.</p>
+    </footer>
+  </div>
+
+  <script>
+    // --- 1. Constants & Setup ---
+    const STORAGE_KEY = 'blog_draft_posts';
+    const SETTINGS_KEY = 'blog_settings';
+    const DELETED_KEY = 'blog_deleted_ids';
+    const CONFIG_ID = 'blog-configuration';
+
+    const CONTAINER = document.getElementById('posts-container');
+    const SAVE_BTN = document.getElementById('save-btn');
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // --- 2. Load Content & Router ---
+    window.addEventListener('DOMContentLoaded', () => {
+      loadSettings();
+      loadPosts();
+      updateSaveButtonState();
+      handleRoute(); // Run router on load
+    });
+
+    // --- 3. Slug Helper ---
+    function slugify(text) {
+      return text.toString().toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-')     // Replace spaces with -
+        .replace(/[^\w\-]+/g, '') // Remove all non-word chars
+        .replace(/\-\-+/g, '-');  // Replace multiple - with single -
+    }
+
+    // --- 4. Routing Logic ---
+    function handleRoute() {
+      const params = new URLSearchParams(window.location.search);
+      const urlParam = params.get('post');
+
+      if (urlParam) {
+        // Single Post View
+        document.body.classList.remove('list-view');
+        document.body.classList.add('single-view');
+
+        // Extract ID from slug (format: slug-post-TIMESTAMP)
+        let targetId = urlParam;
+        // Robust regex to find 'post-NUMBERS' at the end of the string
+        const match = urlParam.match(/(post-\d+)$/);
+        if (match) {
+          targetId = match[1];
+        }
+
+        // Mark the active post
+        const articles = document.querySelectorAll('article');
+        let found = false;
+        articles.forEach(art => {
+          if (art.id === targetId) {
+            art.classList.add('active-post');
+            found = true;
+            // Update Page Title if possible
+            const title = art.querySelector('h2').innerText;
+            document.title = title + " - " + (document.getElementById('blog-title').innerText);
+          } else {
+            art.classList.remove('active-post');
+          }
+        });
+
+        if (!found) {
+          // Handle 404 - post not found, revert to list
+          document.body.classList.add('list-view');
+          document.body.classList.remove('single-view');
+          // Clean URL
+          window.history.replaceState(null, null, window.location.pathname);
+        }
+      } else {
+        // List View
+        document.body.classList.add('list-view');
+        document.body.classList.remove('single-view');
+        const articles = document.querySelectorAll('article');
+        articles.forEach(art => art.classList.remove('active-post'));
+
+        // Re-apply global page title settings
+        const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+        if (settings && settings.pageTitle) document.title = settings.pageTitle;
+        else if (settings && settings.title) document.title = settings.title;
+      }
+    }
+
+    // --- 5. Panel Toggling Logic ---
+    function closeAllPanels() {
+      document.getElementById('settings-section').classList.remove('visible');
+      document.getElementById('editor-section').classList.remove('visible');
+      document.getElementById('help-section').classList.remove('visible');
+    }
+
+    function toggleHelp() {
+      const panel = document.getElementById('help-section');
+      const isVisible = panel.classList.contains('visible');
+      closeAllPanels();
+      if (!isVisible) panel.classList.add('visible');
+    }
+
+    function toggleSettings() {
+      const panel = document.getElementById('settings-section');
+      const isVisible = panel.classList.contains('visible');
+
+      closeAllPanels();
+
+      if (!isVisible) {
+        // Load current values
+        document.getElementById('settings-title').value = document.getElementById('blog-title').innerText;
+        document.getElementById('settings-page-title').value = document.title;
+        document.getElementById('settings-footer-text').value = document.getElementById('footer-author').innerText;
+
+        const metaAuthorTag = document.querySelector('meta[name="author"]');
+        const metaDescTag = document.querySelector('meta[name="description"]');
+
+        let saved = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+        if (!saved) {
+          try {
+            saved = JSON.parse(document.getElementById(CONFIG_ID).textContent);
+          } catch (e) { saved = {}; }
+        }
+
+        if (saved.rawIntro) document.getElementById('settings-intro').value = saved.rawIntro;
+        if (saved.pageTitle) document.getElementById('settings-page-title').value = saved.pageTitle;
+        if (saved.footerText) document.getElementById('settings-footer-text').value = saved.footerText;
+        document.getElementById('settings-meta-author').value = saved.metaAuthor || (metaAuthorTag ? metaAuthorTag.content : '');
+        document.getElementById('settings-meta-desc').value = saved.metaDescription || (metaDescTag ? metaDescTag.content : '');
+
+        panel.classList.add('visible');
+      }
+    }
+
+    function toggleEditor(reset = true) {
+      const panel = document.getElementById('editor-section');
+      const isVisible = panel.classList.contains('visible');
+
+      closeAllPanels();
+
+      if (!isVisible) {
+        panel.classList.add('visible');
+        document.getElementById('post-title').focus();
+        if (reset) resetForm();
+      } else if (reset) {
+        resetForm();
+      }
+    }
+
+    // --- 6. Settings Save Logic ---
+    function saveSettings() {
+      const title = document.getElementById('settings-title').value.trim();
+      const pageTitle = document.getElementById('settings-page-title').value.trim();
+      const rawIntro = document.getElementById('settings-intro').value.trim();
+      const footerText = document.getElementById('settings-footer-text').value.trim();
+      const metaAuthor = document.getElementById('settings-meta-author').value.trim();
+      const metaDesc = document.getElementById('settings-meta-desc').value.trim();
+
+      if (!title) {
+        alert("Blog Title cannot be empty");
+        return;
+      }
+
+      const settings = {
+        title: title,
+        pageTitle: pageTitle,
+        introHtml: marked.parse(rawIntro),
+        rawIntro: rawIntro,
+        footerText: footerText,
+        metaAuthor: metaAuthor,
+        metaDescription: metaDesc
+      };
+
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+
+      applySettings(settings);
+
+      document.getElementById('settings-section').classList.remove('visible');
+      updateSaveButtonState();
+    }
+
+    function loadSettings() {
+      let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+      if (!settings) {
+        try {
+          settings = JSON.parse(document.getElementById(CONFIG_ID).textContent);
+        } catch (e) { /* ignore */ }
+      }
+      if (settings) {
+        applySettings(settings);
+      }
+    }
+
+    function applySettings(settings) {
+      if (settings.title) {
+        document.getElementById('blog-title').innerText = settings.title;
+        if (!settings.footerText) {
+          document.getElementById('footer-author').innerText = settings.title;
+        }
+
+        const ogTitle = document.querySelector('meta[property="og:title"]');
+        if (ogTitle) ogTitle.content = settings.pageTitle || settings.title;
+        const twTitle = document.querySelector('meta[name="twitter:title"]');
+        if (twTitle) twTitle.content = settings.pageTitle || settings.title;
+      }
+
+      if (settings.footerText) {
+        document.getElementById('footer-author').innerText = settings.footerText;
+      }
+
+      if (!document.body.classList.contains('single-view')) {
+        if (settings.pageTitle) {
+          document.title = settings.pageTitle;
+        } else if (settings.title) {
+          document.title = settings.title;
+        }
+      }
+
+      if (settings.introHtml) {
+        document.getElementById('blog-intro').innerHTML = settings.introHtml;
+      }
+
+      if (settings.metaAuthor) {
+        let tag = document.querySelector('meta[name="author"]');
+        if (tag) tag.content = settings.metaAuthor;
+      }
+
+      if (settings.metaDescription) {
+        let tag = document.querySelector('meta[name="description"]');
+        if (tag) tag.content = settings.metaDescription;
+        let ogDesc = document.querySelector('meta[property="og:description"]');
+        if (ogDesc) ogDesc.content = settings.metaDescription;
+        let twDesc = document.querySelector('meta[name="twitter:description"]');
+        if (twDesc) twDesc.content = settings.metaDescription;
+      }
+
+      // Critical: Update the persistent config script for the next save
+      document.getElementById(CONFIG_ID).textContent = JSON.stringify(settings, null, 2);
+    }
+
+    // --- Data Management (Import/Export) ---
+    function exportData() {
+      let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+      if (!settings) {
+        try { settings = JSON.parse(document.getElementById(CONFIG_ID).textContent); } catch (e) { }
+      }
+      if (!settings) {
+        settings = {
+          title: document.getElementById('blog-title').innerText,
+          introHtml: document.getElementById('blog-intro').innerHTML
+        };
+      }
+
+      const articles = document.querySelectorAll('article');
+      const posts = [];
+
+      articles.forEach(art => {
+        posts.push({
+          id: art.id,
+          title: art.querySelector('h2 a').innerText,
+          date: art.querySelector('.meta').innerText,
+          raw: art.dataset.raw ? decodeURIComponent(art.dataset.raw) : ""
+        });
+      });
+
+      const data = {
+        version: "1.0",
+        settings: settings,
+        posts: posts
+      };
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `autograph-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    function importData(input) {
+      const file = input.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        try {
+          const data = JSON.parse(e.target.result);
+
+          if (!confirm("This will overwrite your current browser local storage for this blog. Are you sure?")) {
+            input.value = ''; // Reset input
+            return;
+          }
+
+          localStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem(SETTINGS_KEY);
+          localStorage.removeItem(DELETED_KEY);
+
+          if (data.settings) {
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(data.settings));
+            document.getElementById(CONFIG_ID).textContent = JSON.stringify(data.settings, null, 2);
+          }
+
+          if (data.posts && Array.isArray(data.posts)) {
+            // Reverse the array during import.
+            // Export grabs them Top-to-Bottom (Newest-to-Oldest).
+            // loadPosts uses prepend(), so it expects Oldest-to-Newest to stack them correctly.
+            const drafts = data.posts.map(p => {
+              return {
+                id: p.id,
+                title: p.title,
+                date: p.date,
+                raw: p.raw,
+                content: marked.parse(p.raw)
+              };
+            }).reverse();
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
+          }
+
+          alert("Import successful! The page will now reload.");
+          window.location.reload();
+
+        } catch (err) {
+          alert("Error parsing JSON file: " + err.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // --- 7. Post Logic ---
+    function loadPosts() {
+      const deletedIds = JSON.parse(localStorage.getItem(DELETED_KEY) || '[]');
+      const drafts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+
+      deletedIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+      });
+
+      drafts.forEach(post => {
+        const existingEl = document.getElementById(post.id);
+        const newEl = createPostElement(post);
+        if (existingEl) {
+          CONTAINER.replaceChild(newEl, existingEl);
+        } else {
+          CONTAINER.prepend(newEl);
+        }
+      });
+    }
+
+    function resetForm() {
+      document.getElementById('post-title').value = '';
+      document.getElementById('post-content').value = '';
+      document.getElementById('edit-post-id').value = '';
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('post-date').value = today;
+      document.getElementById('publish-btn').textContent = 'Publish to Page';
+    }
+
+    function savePost() {
+      const idInput = document.getElementById('edit-post-id');
+      const titleInput = document.getElementById('post-title');
+      const contentInput = document.getElementById('post-content');
+      const dateInput = document.getElementById('post-date');
+
+      const title = titleInput.value.trim();
+      const rawContent = contentInput.value.trim();
+      const editingId = idInput.value;
+      const dateVal = dateInput.value;
+
+      if (!title || !rawContent) {
+        alert("Please fill in both title and content.");
+        return;
+      }
+
+      const contentHtml = marked.parse(rawContent);
+
+      let postId = editingId;
+      let postDateStr;
+
+      if (dateVal) {
+        const d = new Date(dateVal + "T12:00:00");
+        postDateStr = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      } else {
+        postDateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      }
+
+      if (!postId) {
+        postId = 'post-' + Date.now();
+      }
+
+      const postData = {
+        id: postId,
+        title: title,
+        date: postDateStr,
+        content: contentHtml,
+        raw: rawContent
+      };
+
+      updateLocalStorage(postData);
+
+      const newEl = createPostElement(postData);
+      const existingEl = document.getElementById(postId);
+
+      if (existingEl) CONTAINER.replaceChild(newEl, existingEl);
+      else CONTAINER.prepend(newEl);
+
+      toggleEditor(true);
+      updateSaveButtonState();
+      handleRoute();
+    }
+
+    function editPost(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+
+      let rawContent = "";
+      if (el.dataset.raw) {
+        rawContent = decodeURIComponent(el.dataset.raw);
+      } else {
+        rawContent = el.querySelector('.content').innerText;
+        alert("Note: Editing simplified text.");
+      }
+
+      const title = el.querySelector('h2').innerText;
+      const dateStr = el.querySelector('.meta').innerText;
+
+      document.getElementById('post-title').value = title;
+      document.getElementById('post-content').value = rawContent;
+      document.getElementById('edit-post-id').value = id;
+
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) {
+        // Use local time components to avoid timezone shifts (e.g. previous day)
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        document.getElementById('post-date').value = `${year}-${month}-${day}`;
+      }
+
+      document.getElementById('publish-btn').textContent = 'Update Post';
+
+      const panel = document.getElementById('editor-section');
+      closeAllPanels();
+      panel.classList.add('visible');
+      panel.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function deletePost(id) {
+      if (!confirm("Are you sure you want to delete this post?")) return;
+
+      const el = document.getElementById(id);
+      if (el) el.remove();
+
+      let drafts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      drafts = drafts.filter(p => p.id !== id);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
+
+      let deletedIds = JSON.parse(localStorage.getItem(DELETED_KEY) || '[]');
+      if (!deletedIds.includes(id)) {
+        deletedIds.push(id);
+        localStorage.setItem(DELETED_KEY, JSON.stringify(deletedIds));
+      }
+      updateSaveButtonState();
+
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('post') === id) {
+        window.location.href = window.location.pathname;
+      }
+    }
+
+    function updateLocalStorage(post) {
+      let drafts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      drafts = drafts.filter(p => p.id !== post.id);
+      drafts.push(post);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
+    }
+
+    function updateSaveButtonState() {
+      const drafts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      const deletedIds = JSON.parse(localStorage.getItem(DELETED_KEY) || '[]');
+      const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+
+      if (drafts.length > 0 || deletedIds.length > 0 || settings) {
+        SAVE_BTN.disabled = false;
+        SAVE_BTN.title = "You have unsaved changes";
+      } else {
+        SAVE_BTN.disabled = true;
+        SAVE_BTN.title = "No changes to save";
+      }
+    }
+
+    function createPostElement(post) {
+      const article = document.createElement('article');
+      article.id = post.id;
+      article.dataset.raw = encodeURIComponent(post.raw);
+
+      const slug = slugify(post.title);
+      const permalink = slug ? `${slug}-${post.id}` : post.id;
+
+      article.innerHTML = `
+            <header>
+                <h2>
+                    <a href="?post=${permalink}">${post.title}</a>
+                </h2>
+                <div class="meta-row">
+                    <span class="meta">${post.date}</span>
+                    <div class="post-actions">
+                        <button onclick="editPost('${post.id}')">Edit</button>
+                        <button class="delete-btn" onclick="deletePost('${post.id}')">Delete</button>
+                    </div>
+                </div>
+            </header>
+            <div class="content">
+                ${post.content}
+            </div>
+        `;
+      return article;
+    }
+
+    // --- 8. Save Blog (Quine) ---
+    function downloadStaticPage() {
+      const docClone = document.documentElement.cloneNode(true);
+
+      const currentContent = CONTAINER.innerHTML;
+      const cloneContainer = docClone.querySelector('#posts-container');
+      cloneContainer.innerHTML = currentContent;
+
+      docClone.querySelector('body').classList.add('list-view');
+      docClone.querySelector('body').classList.remove('single-view');
+
+      const articles = cloneContainer.querySelectorAll('article');
+      articles.forEach(article => article.classList.remove('active-post'));
+
+      docClone.querySelector('#editor-section').classList.remove('visible');
+      docClone.querySelector('#settings-section').classList.remove('visible');
+      docClone.querySelector('#help-section').classList.remove('visible');
+
+      docClone.querySelector('#post-title').setAttribute('value', '');
+      docClone.querySelector('#post-content').innerHTML = '';
+      docClone.querySelector('#post-date').setAttribute('value', '');
+      docClone.querySelector('#settings-title').setAttribute('value', '');
+      docClone.querySelector('#settings-page-title').setAttribute('value', '');
+      docClone.querySelector('#settings-intro').innerHTML = '';
+      docClone.querySelector('#settings-footer-text').setAttribute('value', '');
+      docClone.querySelector('#settings-meta-author').setAttribute('value', '');
+      docClone.querySelector('#settings-meta-desc').innerHTML = '';
+
+      // Correct way to target the element in the clone (fix for crash)
+      const currentConfig = document.getElementById(CONFIG_ID).textContent;
+      docClone.querySelector('#' + CONFIG_ID).textContent = currentConfig;
+
+      const cloneSaveBtn = docClone.querySelector('#save-btn');
+      cloneSaveBtn.disabled = true;
+
+      let htmlContent = "<!DOCTYPE html>\n" + docClone.outerHTML;
+
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+
+      const date = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `autograph-${date}.html`;
+      document.body.appendChild(a);
+      a.click();
+
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  </script>
+
+</body>
+
+</html>
